@@ -18,6 +18,8 @@ package org.pocketworkstation.pckeyboard;
 
 import org.pocketworkstation.pckeyboard.LatinIMEUtil.RingCharBuffer;
 
+import com.senter.support.openapi.StBarcodeScanner;
+
 import com.google.android.voiceime.VoiceRecognitionTrigger;
 
 import org.xmlpull.v1.XmlPullParserException;
@@ -1226,7 +1228,29 @@ public class LatinIME extends InputMethodService implements
 
     @Override
     public boolean onKeyUp(int keyCode, KeyEvent event) {
+        Log.i(TAG, "Got scan code: " + keyCode);
         switch (keyCode) {
+        // TODO Get rid of hardcoded value
+        case 221:
+            try
+            {
+                // TODO Prevent second run!
+                String bar_code = StBarcodeScanner.getInstance().scan();
+                if (bar_code != null)
+                {
+                    Log.i(TAG, "Got bar code: " + bar_code);
+                    // Try to add it to the current input text
+                    InputConnection ic = getCurrentInputConnection();
+                    if (ic != null)
+                        ic.commitText(bar_code, 1);
+                }
+                Log.e(TAG, "Failure to get barcode");
+            }
+            catch (InterruptedException e)
+            {
+                Log.e(TAG, "Barcode scanner has been interrupted");
+            }
+            break;
         case KeyEvent.KEYCODE_DPAD_DOWN:
         case KeyEvent.KEYCODE_DPAD_UP:
         case KeyEvent.KEYCODE_DPAD_LEFT:
