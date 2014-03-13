@@ -39,6 +39,7 @@ import android.content.res.Resources;
 import android.content.res.XmlResourceParser;
 import android.inputmethodservice.InputMethodService;
 import android.media.AudioManager;
+import android.media.MediaPlayer;
 import android.os.Debug;
 import android.os.Handler;
 import android.os.IBinder;
@@ -76,6 +77,7 @@ import java.io.FileDescriptor;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -137,6 +139,9 @@ public class LatinIME extends InputMethodService implements
     static final String PREF_SWIPE_RIGHT = "pref_swipe_right";
     static final String PREF_VOL_UP = "pref_vol_up";
     static final String PREF_VOL_DOWN = "pref_vol_down";
+    static final String PREF_PREPEND_SCAN_RESULT = "pref_prepend_scan_result";
+    static final String PREF_SEND_KEY_AFTER_SCAN = "send_key_after_scan";
+    static final String PREF_CLEAN_CURRENT_TEXT = "clean_current_text";
 
     private static final int MSG_UPDATE_SUGGESTIONS = 0;
     private static final int MSG_START_TUTORIAL = 1;
@@ -227,9 +232,17 @@ public class LatinIME extends InputMethodService implements
     private String mVolUpAction;
     private String mVolDownAction;
 
+
+    private String mPrependBarcodeScanResult;
+    private int mSendKeyAfter;
+    private boolean mClearTextBeforeScan;
+    private AtomicBoolean mScanInProgress = new AtomicBoolean(false);
+    private MediaPlayer mPlayer;
+    private AtomicBoolean mBeepProgress = new AtomicBoolean(false);
+
     public static final GlobalKeyboardSettings sKeyboardSettings = new GlobalKeyboardSettings(); 
     static LatinIME sInstance;
-    
+
     private int mHeightPortrait;
     private int mHeightLandscape;
     private int mNumKeyboardModes = 3;
@@ -423,8 +436,27 @@ public class LatinIME extends InputMethodService implements
         sKeyboardSettings.initPrefs(prefs, res);
 
         mVoiceRecognitionTrigger = new VoiceRecognitionTrigger(this);
-        
+
         updateKeyboardOptions();
+
+        // Set barcode scanner preferences
+        mPrependBarcodeScanResult = prefs.getString(PREF_PREPEND_SCAN_RESULT, "");
+        // TODO Use default value prom resource
+        mSendKeyAfter = getPrefInt(prefs, PREF_SEND_KEY_AFTER_SCAN, 0);
+        mClearTextBeforeScan = prefs.getBoolean(
+            PREF_CLEAN_CURRENT_TEXT
+          , res.getBoolean(R.bool.default_clean_current_text)
+          );
+
+        Log.i(TAG, "Configured prepend string: " + mPrependBarcodeScanResult);
+        Log.i(TAG, "Configured send key after: " + mSendKeyAfter);
+        Log.i(TAG, "Clean current text: " + mClearTextBeforeScan);
+
+        // Make an instance of a media player to produce scan complete sound
+        mPlayer = MediaPlayer.create(this, R.raw.barcodeaudiosucced);
+        if (mPlayer == null) {
+            Log.i(TAG, "Unable to create the media player: will not be able to beebeep ;-)");
+        }
 
         PluginManager.getPluginDictionaries(getApplicationContext());
         mPluginManager = new PluginManager(this);
@@ -479,13 +511,13 @@ public class LatinIME extends InputMethodService implements
         LatinIME.sKeyboardSettings.keyboardMode = kbMode;
         LatinIME.sKeyboardSettings.keyboardHeightPercent = (float) screenHeightPercent;
     }
-    
+
     private void setNotification(boolean visible) {
-    	final String ACTION = "org.pocketworkstation.pckeyboard.SHOW";
+        final String ACTION = "org.pocketworkstation.pckeyboard.SHOW";
         final int ID = 1;
         String ns = Context.NOTIFICATION_SERVICE;
         NotificationManager mNotificationManager = (NotificationManager) getSystemService(ns);
-        
+
         if (visible && mNotificationReceiver == null) {
             int icon = R.drawable.icon;
             CharSequence text = "Keyboard notification enabled.";
@@ -496,15 +528,15 @@ public class LatinIME extends InputMethodService implements
             mNotificationReceiver = new NotificationReceiver(this);
             final IntentFilter pFilter = new IntentFilter(ACTION);
             registerReceiver(mNotificationReceiver, pFilter);
-            
+
             Intent notificationIntent = new Intent(ACTION);
-            
+
             PendingIntent contentIntent = PendingIntent.getBroadcast(getApplicationContext(), 1, notificationIntent, 0);
             //PendingIntent contentIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
-            
+
             String title = "Show Hacker's Keyboard";
             String body = "Select this to open the keyboard. Disable in settings.";
-            
+
             notification.flags |= Notification.FLAG_ONGOING_EVENT | Notification.FLAG_NO_CLEAR;
             notification.setLatestEventInfo(getApplicationContext(), title, body, contentIntent);
             mNotificationManager.notify(ID, notification);
@@ -514,7 +546,7 @@ public class LatinIME extends InputMethodService implements
             mNotificationReceiver = null;
         }
     }
-    
+
     private boolean isPortrait() {
         return (mOrientation == Configuration.ORIENTATION_PORTRAIT);
     }
@@ -633,6 +665,11 @@ public class LatinIME extends InputMethodService implements
         }
         LatinImeLogger.commit();
         LatinImeLogger.onDestroy();
+
+        // Free some media player resources
+        if (mPlayer != null)
+            mPlayer.release();
+
         super.onDestroy();
     }
 
@@ -1230,11 +1267,16 @@ public class LatinIME extends InputMethodService implements
     public boolean onKeyUp(int keyCode, KeyEvent event) {
         Log.i(TAG, "Got scan code: " + keyCode);
         switch (keyCode) {
-        // TODO Get rid of hardcoded value
+        // TODO Get rid of the hardcoded value
         case 221:
+            // Prevent second keypress while a previous in progress
+            if (mScanInProgress.compareAndSet(false, true) == false)
+            {
+                Log.d(TAG, "Barcode scanner still working...");
+                return true;
+            }
             try
             {
-                // TODO Prevent second run!
                 String bar_code = StBarcodeScanner.getInstance().scan();
                 if (bar_code != null)
                 {
@@ -1242,14 +1284,57 @@ public class LatinIME extends InputMethodService implements
                     // Try to add it to the current input text
                     InputConnection ic = getCurrentInputConnection();
                     if (ic != null)
+                    {
+                        ic.beginBatchEdit();                // Begin edit transaction
+
+                        if (mPrependBarcodeScanResult != null && !mPrependBarcodeScanResult.isEmpty())
+                            bar_code = mPrependBarcodeScanResult + bar_code;
+                        // Should we clear an input text field before?
+                        if (mClearTextBeforeScan)
+                            ic.deleteSurroundingText(9999, 9999);
+                        // Push a new text into the input field
                         ic.commitText(bar_code, 1);
+                        int code = 0;
+                        switch (mSendKeyAfter)
+                        {
+                        case 2:
+                            sendTab();
+                            break;
+                        case 1:
+                            sendDownUpKeyEvents(KeyEvent.KEYCODE_ENTER);
+                        case 0:
+                        default:
+                            break;
+                        }
+
+                        ic.endBatchEdit();                  // End edit transaction
+
+                        // Can we produce a beep ;-) ?
+                        if (mPlayer != null)
+                        {
+                            try
+                            {
+                                mPlayer.stop();
+                                mPlayer.prepare();
+                                mPlayer.start();
+                            }
+                            catch (IOException e)
+                            {
+                                Log.e(TAG, "Failure to prepare the media player. Will skip a beebeep...");
+                            }
+                        }
+                    }
                 }
-                Log.e(TAG, "Failure to get barcode");
+                else
+                {
+                    Log.e(TAG, "Failure to scan a barcode");
+                }
             }
             catch (InterruptedException e)
             {
                 Log.e(TAG, "Barcode scanner has been interrupted");
             }
+            mScanInProgress.set(false);                     // Unlock the scanner
             break;
         case KeyEvent.KEYCODE_DPAD_DOWN:
         case KeyEvent.KEYCODE_DPAD_UP:
@@ -3042,6 +3127,18 @@ public class LatinIME extends InputMethodService implements
             mVolDownAction = sharedPreferences.getString(PREF_VOL_DOWN, res.getString(R.string.default_vol_down));
         } else if (PREF_VIBRATE_LEN.equals(key)) {
             mVibrateLen = getPrefInt(sharedPreferences, PREF_VIBRATE_LEN, getResources().getString(R.string.vibrate_duration_ms));
+        } else if (PREF_PREPEND_SCAN_RESULT.equals(key)) {
+            mPrependBarcodeScanResult = sharedPreferences.getString(PREF_PREPEND_SCAN_RESULT, "");
+            Log.i(TAG, "Update prepend string: " + mPrependBarcodeScanResult);
+        } else if (PREF_SEND_KEY_AFTER_SCAN.equals(key)) {
+            mSendKeyAfter = getPrefInt(sharedPreferences, PREF_SEND_KEY_AFTER_SCAN, 0);
+            Log.i(TAG, "Update send key after: " + mSendKeyAfter);
+        } else if (PREF_CLEAN_CURRENT_TEXT.equals(key)) {
+            mClearTextBeforeScan = sharedPreferences.getBoolean(
+                PREF_CLEAN_CURRENT_TEXT
+              , res.getBoolean(R.bool.default_clean_current_text)
+              );
+            Log.i(TAG, "Update clean current text: " + mClearTextBeforeScan);
         }
 
         updateKeyboardOptions();

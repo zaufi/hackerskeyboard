@@ -33,4 +33,12 @@
     <string name="settings_key_mode_always_show" translatable="false">1</string>
     <!-- Always hide the settings key -->
     <string name="settings_key_mode_always_hide" translatable="false">2</string>
+
+    <!-- Prepend scanned barcode w/ a given string -->
+    <string name="prepend_scan_result"></string>
+    <!-- Option values to send key code after barcode scan ends -->
+    <string name="send_key_after_scan_none" translatable="false">0</string>
+    <string name="send_key_after_scan_enter" translatable="false">1</string>
+    <string name="send_key_after_scan_tab" translatable="false">2</string>
+
 </resources>

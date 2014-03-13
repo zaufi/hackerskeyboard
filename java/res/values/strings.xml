@@ -26,6 +26,8 @@
     <string name="english_ime_input_options">Input options</string>
 
     <!-- Various configuration titles -->
+    <string name="title_barcode_scanner_settings">Barcode scanner settings</string>
+    <string name="title_prepend_scan_result">Prepend scanned barcode with</string>
     <string name="title_keyboard_view_settings">Keyboard view settings</string>
     <string name="title_keyboard_height_portrait">Keyboard height, portrait</string>
     <string name="title_keyboard_height_landscape">Keyboard height, landscape</string>
@@ -51,37 +53,37 @@
 
     <!-- Option to enable using nearby keys when correcting/predicting -->
     <string name="hit_correction">Correct typing errors</string>
-    
+
     <!-- Description for hit_correction  -->
     <string name="hit_correction_summary">Enable input error correction</string>
-    
+
     <!-- Option to enable using nearby keys when correcting/predicting in landscape-->
     <string name="hit_correction_land">Landscape input errors</string>
-    
+
     <!-- Description for hit_correction in landscape -->
     <string name="hit_correction_land_summary">Enable input error correction</string>
-    
+
     <!-- Option to automatically correct word on hitting space -->
     <string name="auto_correction">Word suggestions</string> 
-    
+
     <!-- Description for auto_correction -->
     <string name="auto_correction_summary">Automatically correct the previous word</string>
-	
+
     <!-- Option to enable text prediction -->
     <string name="prediction">Word suggestions</string>
     <!-- Category title for text prediction -->
     <string name="prediction_category">Word suggestion settings</string>
     <!-- Description for text prediction -->
     <string name="prediction_summary">Enable auto completion while typing</string>
-	
+
     <!-- Dialog title for auto complete choices -->
     <string name="auto_complete_dialog_title">Auto completion</string>
-    
+
     <!-- Option to enable text prediction in landscape -->
     <string name="prediction_landscape">Increase text field size</string> 
     <!-- Description for text prediction -->
     <string name="prediction_landscape_summary">Hide word suggestions in landscape view</string>
-	
+
     <!-- Option to enable auto capitalization of sentences -->
     <string name="auto_cap">Auto-capitalization</string> 
     <!-- Description for auto cap -->
@@ -90,22 +92,42 @@
     <string name="auto_punctuate">Auto-punctuate</string> 
     <!-- Description for auto punctuate -->
     <string name="auto_punctuate_summary"></string>
-    
+
     <!-- Option to enable quick fixes -->
     <string name="quick_fixes">Quick fixes</string>
     <!-- Description for quick fixes -->
     <string name="quick_fixes_summary">Corrects commonly typed mistakes</string>
-    
+
     <!-- Option to enable showing suggestions -->
     <string name="show_suggestions">Show suggestions</string>
     <!-- Description for show suggestions -->
     <string name="show_suggestions_summary">Display suggested words while typing</string>
-    
+
     <!-- Option to enable auto completion -->
     <string name="auto_complete">Auto-complete</string>
     <!-- Description for auto completion -->
     <string name="auto_complete_summary">Spacebar and punctuation automatically insert highlighted word</string>
-    
+
+    <!-- Option to send key code after barcode scan ends -->
+    <string name="prefs_send_key_after_scan">Send key after scan</string>
+    <!-- Array of the keys to send after barcode scan ends -->
+    <string-array name="send_key_after_scan_values" translatable="false">
+        <item>@string/send_key_after_scan_none</item>
+        <item>@string/send_key_after_scan_enter</item>
+        <item>@string/send_key_after_scan_tab</item>
+    </string-array>
+    <string name="send_key_after_scan_none_name">None</string>
+    <string name="send_key_after_scan_enter_name">Enter</string>
+    <string name="send_key_after_scan_tab_name">Tab</string>
+    <!-- Array of the key codes -->
+    <string-array name="send_key_after_scan">
+        <item>@string/send_key_after_scan_none_name</item>
+        <item>@string/send_key_after_scan_enter_name</item>
+        <item>@string/send_key_after_scan_tab_name</item>
+    </string-array>
+
+    <string name="clean_current_text">Clean current text</string>
+
     <!-- Option to show/hide the settings key -->
     <string name="prefs_settings_key">Show settings key</string>
     <!-- Array of the settings key mode values -->

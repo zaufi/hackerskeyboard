@@ -42,4 +42,8 @@
     <bool name="default_compact_mode_enabled">false</bool>
     <bool name="default_caps_lock">true</bool>
     <bool name="default_shift_lock_modifiers">true</bool>
+
+    <!-- Some barcode scanner defaults -->
+    <bool name="default_clean_current_text">false</bool>
+
 </resources>

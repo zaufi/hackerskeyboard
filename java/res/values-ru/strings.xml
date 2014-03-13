@@ -137,4 +137,14 @@
     <string name="keyboard_layout" msgid="437433231038683666">"Вид клавиатуры"</string>
     <string name="subtype_mode_keyboard" msgid="2242090416595003881">"клавиатура"</string>
     <string name="subtype_mode_voice" msgid="4394113125441627771">"голосовой"</string>
+
+    <!-- Translated strings for barcode scanner settings -->
+    <string name="title_barcode_scanner_settings">Сканер штрих-кодов</string>
+    <string name="title_prepend_scan_result">Добавлять строку перед штрих-кодом</string>
+    <string name="prefs_send_key_after_scan">Посылать после сканирования</string>
+    <string name="send_key_after_scan_none_name">Ничего</string>
+    <string name="send_key_after_scan_enter_name">Ввод</string>
+    <string name="send_key_after_scan_tab_name">Табуляция</string>
+    <string name="clean_current_text">Очищать текст перед сканированием</string>
+
 </resources>
